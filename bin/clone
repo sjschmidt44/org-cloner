@@ -1,0 +1,63 @@
+#!/usr/bin/env node
+
+require('shelljs/global')
+const parser = require('../lib/arg-parser')
+const Promise = require('bluebird')
+const request = require('superagent')
+const fs = Promise.promisifyAll(require('fs'), {suffix: 'Prom'})
+const GH_TOKEN = process.env.GH_TOKEN
+
+let args = parser.parseArgs()
+
+if (!which('git')) {
+  echo('Sorry, this script requires git')
+  exit(1)
+}
+
+let errCb = err => {
+  console.error(err)
+  exit(1)
+}
+
+
+request
+.get(`https://api.github.com/users/${args.origin}/repos`)
+.query({per_page: '100'})
+.then(
+  res => {
+    res.body.forEach(ele => {
+      let path = ele.ssh_url.split('/')[1].split('.git')[0]
+      exec(`git clone ${ele.clone_url} ${args.path}/${path}`)
+    })
+    return res.body
+  }, errCb)
+.then(
+  body => {
+    body.forEach(ele => {
+      let path = ele.ssh_url.split('/')[1].split('.git')[0]
+
+      request
+      .post(`https://api.github.com/orgs/${args.destination}/repos`)
+      .send({name: path})
+      .auth('Bearer', GH_TOKEN, {type: 'auto'})
+      .end((err, res) => {
+        if(err) console.log(err)
+        echo('Processing requests...')
+        cd(path)
+        exec('rm -rf .git')
+        exec('git init')
+        exec(`git remote add origin ${res.body.clone_url}`)
+        exec('git add .')
+        exec('git commit -m "First commit"')
+        cd('../')
+      })
+    })
+    return body
+  }, errCb)
+
+
+// SETUP INSTRUCTIONS
+// 1. Setup a read/write org-level access OAuth token on Github, and set it into your bash config `export GH_TOKEN='my-token'`
+// 1. From Github website: Create a new Organization using similar syntax/course code for your course; i.e. github.com/codefellows-seattle-javascript-401d20
+// 1. Create and/or Navigate to the directory which you would like to setup your lab repos within
+// 2. Run the included script to set up

@@ -1,0 +1,22 @@
+{
+  "name": "org-cloner",
+  "version": "1.0.0",
+  "description": "Clone a GH Organization and push all repos to your own org",
+  "bin": {
+    "clone": "bin/clone"
+  },
+  "keywords": [
+    "Github",
+    "Organization",
+    "clone",
+    "repositories"
+  ],
+  "author": "Scott Schmidt, Code Fellows LLC",
+  "license": "MIT",
+  "dependencies": {
+    "argparse": "^1.0.9",
+    "bluebird": "^3.5.0",
+    "shelljs": "^0.7.8",
+    "superagent": "^3.5.2"
+  }
+}
