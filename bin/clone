@@ -8,6 +8,7 @@ const fs = Promise.promisifyAll(require('fs'), {suffix: 'Prom'})
 const GH_TOKEN = process.env.GH_TOKEN
 
 let args = parser.parseArgs()
+console.log(args)
 
 if (!which('git')) {
   echo('Sorry, this script requires git')
@@ -27,7 +28,7 @@ request
   res => {
     res.body.forEach(ele => {
       let path = ele.ssh_url.split('/')[1].split('.git')[0]
-      exec(`git clone ${ele.clone_url} ${args.path}/${path}`)
+      exec(`git clone ${ele.clone_url}`)
     })
     return res.body
   }, errCb)
@@ -40,9 +41,8 @@ request
       .post(`https://api.github.com/orgs/${args.destination}/repos`)
       .send({name: path})
       .auth('Bearer', GH_TOKEN, {type: 'auto'})
-      .end((err, res) => {
-        if(err) console.log(err)
-        echo('Processing requests...')
+      .then(res => {
+        echo(`Resetting remote for ${path}`)
         cd(path)
         exec('rm -rf .git')
         exec('git init')
@@ -51,9 +51,17 @@ request
         exec('git commit -m "First commit"')
         cd('../')
       })
+      .then(
+        () => {
+          if(args.publish) {
+            echo(`Publishing ${path}`)
+            cd(path)
+            exec('git push origin master')
+            cd('../')
+          }
+        }, errCb)
     })
-    return body
-  }, errCb)
+  })
 
 
 // SETUP INSTRUCTIONS
